@@ -1,0 +1,92 @@
+Step-by-Step Plan
+✅ 1. Set up SLA Definitions (if not already)
+
+Make sure the default Incident SLAs are defined, such as:
+
+    Priority 1 – Respond within 1 hour
+
+    Priority 2 – Respond within 4 hours
+
+    Path: Service Level Management > SLA Definitions
+
+✅ 2. Add a custom field to track SLA status
+
+Add a new field to the Incident table:
+
+    Name: u_sla_status
+
+    Type: Choice (Values: On Track, Warning, Breached)
+
+You can also add a UI color indicator using a UI Policy or Client Script later.
+✅ 3. Write a Scheduled Scripted Job
+
+Run every 15 minutes to check for SLAs that are about to breach or already breached.
+
+Sample pseudo-code:
+
+var gr = new GlideRecord('incident');
+gr.addEncodedQuery('active=true^priorityIN1,2,3'); // Only active incidents with SLA
+gr.query();
+
+while (gr.next()) {
+    var sla = new GlideSLA();
+    sla.setSLA('your_sla_definition_sys_id');
+    sla.setTask(gr);
+    var remaining = sla.getTimeLeft(); // returns time in ms
+
+    if (remaining < 0) {
+        gr.u_sla_status = 'Breached';
+    } else if (remaining < 30 * 60 * 1000) { // less than 30 mins
+        gr.u_sla_status = 'Warning';
+        // Optional: Call notification function
+    } else {
+        gr.u_sla_status = 'On Track';
+    }
+    gr.update();
+}
+
+✅ 4. Create Email Notification (Optional but Powerful)
+
+Set up an email notification:
+
+    Triggered by a Business Rule or included in the script above.
+
+    Condition: If u_sla_status changes to "Warning"
+
+    Message: “Incident INC001234 is about to breach SLA.”
+
+✅ 5. Add Color Indicator (UI Policy or Client Script)
+
+Example:
+
+// Client Script: onLoad
+if (g_form.getValue('u_sla_status') == 'Warning') {
+  g_form.setDisplay('u_sla_status', true);
+  g_form.setValue('u_sla_status', '⚠️ SLA Warning');
+}
+
+✅ 6. Build a Report/Dashboard
+
+Create a list report or pie chart showing:
+
+    of Incidents by SLA Status
+
+    SLA Status vs Priority
+
+Add this to a custom dashboard for visualization.
+📸 Final Result
+
+    Incidents show SLA status with colors.
+
+    Email alerts go to technicians before breach.
+
+    Dashboard/report shows SLA performance.
+
+
+🪄 Bonus: Expand It
+
+    Create a related table SLA Breach History
+
+    Add remediation comments
+
+    Track SLA compliance over time per group
